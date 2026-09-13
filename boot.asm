@@ -16,31 +16,53 @@ mulai:
 
   mov [drive_boot], dl
 
-  ; ES:BX = 0000:1000
+  ; reset disk untuk load bootloader
+  xor ax, ax
+  mov dl, [drive_boot]
+  int 0x13
+  jc gagal_disk
 
-  ; 0x0000 * 16 + 0x1000
-  ; = 0x1000
-
+  ; load dari stage 2
+  ; isi sektor = 2 - 5
+  ; antara lain 0000:1000
+  ; ini adalah physical address dari bootloader kita
+  xor ax, ax
+  mov es, ax
   mov bx, 0x1000
-
   mov ah, 0x02
 
-  mov al, 8
-  
+  mov al, 4
   mov ch, 0
-
   mov cl, 2
-
   mov dh, 0
 
   mov dl, [drive_boot]
   int 0x13
 
-  jc gagal_membaca_disk
+  jc gagal_stage2
 
 
-  ; ini bagian dari protected modenya
-  ; 32 bit protected modenya
+  ; section untuk load kernel
+  ; 6 - 13
+  ; 1000:0000
+  ; 0x1000 * 16
+  ; 0x10000
+  mov ax, 0x1000
+  mov es, ax
+  
+  xor bx, bx
+  mov ah, 0x02
+
+  mov al, 8
+
+  mov ch, 0
+
+  mov cl, 6
+
+  mov dh, 0
+  mov dl, [drive_boot]
+  int 0x13
+  jc gagal_kernel
 
   cli
 
@@ -48,17 +70,52 @@ mulai:
 
   mov eax, cr0
   or eax, 0x1
-
   mov cr0, eax
 
   jmp SELECTOR_KODE:protected_mode
 
-gagal_membaca_disk:
+gagal_disk:
+  mov si, pesan_gagal_disk
+  call cetak_bios
+  jmp berhenti
+
+gagal_stage2:
+  mov si, pesan_gagal_stage2
+  call cetak_bios
+  jmp berhenti
+
+gagal_kernel:
+  mov si, pesan_gagal_kernel
+  call cetak_bios
+  jmp berhenti
+
+cetak_bios:
+  pusha
+
+.loop:
+  lodsb
+
+  cmp al, 0
+  je .selesai
+
+  mov ah, 0x0E
+  mov bh, 0
+
+  int 0x10
+
+  jmp .loop
+
+.selesai:
+  popa
+  ret
+
+berhenti:
   cli
 
-.berhenti:
+.loop:
   hlt
-  jmp .berhenti
+
+  jmp .loop
 
 ; base = 0
 ; limit = 4GB
@@ -111,15 +168,25 @@ protected_mode:
   mov eax, 0x1000
   call eax
 
-selesai:
   cli
 
 .loop:
   hlt
   jmp .loop
 
+[BITS 16]
+
 drive_boot:
   db 0
+
+pesan_gagal_disk:
+  db "Gagal untuk reset disknya njir!", 0
+
+pesan_gagal_stage2:
+  db "Gagal baca Stage 2 njir", 0
+
+pesan_gagal_kernel:
+  db "Gagal baca kernelnya njir", 0
 
 times 510 - ($ - $$) db 0
 dw 0xAA55

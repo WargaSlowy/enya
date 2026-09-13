@@ -1,8 +1,8 @@
-ENTRY(mulai_bootloader)
+ENTRY(mulai_kernel)
 
 SECTIONS 
 {
-  . = 0x1000;
+  . = 0x10000;
 
   .text :
   {
@@ -31,5 +31,6 @@ SECTIONS
     *(.comment)
     *(.note*)
     *(.eh_frame*)
+    *(.gcc_except_table*)
   }
 }
