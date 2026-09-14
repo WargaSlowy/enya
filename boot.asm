@@ -3,6 +3,7 @@
 
 mulai:
   cli
+  cld
 
   xor ax, ax 
 
@@ -31,13 +32,13 @@ mulai:
   mov bx, 0x1000
   mov ah, 0x02
 
-  mov al, 4
+  mov al, STAGE2_SECTORS
   mov ch, 0
-  mov cl, 2
+  mov cl, STAGE2_FIRST_SECTOR
   mov dh, 0
 
   mov dl, [drive_boot]
-  int 0x13
+  call baca_sector_dengan_retry
 
   jc gagal_stage2
 
@@ -53,15 +54,13 @@ mulai:
   xor bx, bx
   mov ah, 0x02
 
-  mov al, 8
-
+  mov al, KERNEL_SECTORS
   mov ch, 0
-
-  mov cl, 6
+  mov cl, KERNEL_FIRST_SECTOR
 
   mov dh, 0
   mov dl, [drive_boot]
-  int 0x13
+  call baca_sector_dengan_retry
   jc gagal_kernel
 
   cli
@@ -175,6 +174,47 @@ protected_mode:
   jmp .loop
 
 [BITS 16]
+
+baca_sector_dengan_retry:
+  push di
+
+  mov di, 3
+
+.retry:
+  push ax
+  push bx
+  push cx
+  push dx
+
+  int 0x13
+
+  pop dx
+  pop cx
+  pop bx
+  pop ax
+
+  jnc .sukses
+
+  push ax
+
+  xor ax, ax
+  mov dl, [drive_boot]
+  int 0x13
+
+  pop ax
+
+  dec di
+
+  jnz .retry
+
+  pop di
+  stc
+  ret
+
+.sukses:
+  pop di
+  clc
+  ret
 
 drive_boot:
   db 0

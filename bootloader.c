@@ -2,6 +2,9 @@ typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
 
+extern uint8_t __bss_mulai;
+extern uint8_t __bss_akhir;
+
 #define ALAMAT_VGA 0xB8000
 #define LEBAR_VGA 80
 #define TINGGI_VGA 25
@@ -29,6 +32,15 @@ enum WarnaVGA {
   VGA_PUTIH = 15,
 };
 
+static void bershikan_bss(void) {
+  uint8_t* alamat = &__bss_mulai;
+
+  while (alamat < &__bss_akhir) {
+    *alamat = 0;
+    alamat++;
+  }
+}
+
 static uint8_t buat_warna(uint8_t foreground, uint8_t background) {
   return foreground | (background << 4);
 }
@@ -38,7 +50,7 @@ static uint16_t buat_entry_vga(char karakter, uint8_t warna) {
 }
 
 static void bershikan_layar(void) {
-  uint8_t warna = buat_warna(VGA_ABU_TERANG, VGA_HIJAU);
+  uint8_t warna = buat_warna(VGA_ABU_TERANG, VGA_HITAM);
 
   for (uint32_t y = 0; y < TINGGI_VGA; y++) {
     for (uint32_t x = 0; x < LEBAR_VGA; x++) {
@@ -107,12 +119,15 @@ static void hentikan_cpu(void) {
 }
 
 __attribute__((section(".text.mulai"))) void mulai_bootloader(void) {
+  bershikan_bss();
+
   uint8_t warna_normal = buat_warna(VGA_ABU_TERANG, VGA_HITAM);
   uint8_t warna_sukses = buat_warna(VGA_HIJAU_TERANG, VGA_HITAM);
   uint8_t warna_info = buat_warna(VGA_CYAN_TERANG, VGA_HITAM);
   bershikan_layar();
 
   cetak_teks("BOOTLOADER BUATAN WARGA SLOWY", warna_info);
+  cetak_teks("\n\n", warna_normal);
   cetak_teks("[bootloader] STAGE 2 berjalan dengan aman di alamat: ", warna_sukses);
   cetak_hex(0x1000, warna_normal);
   cetak_teks("\n", warna_normal);

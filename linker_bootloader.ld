@@ -23,8 +23,12 @@ SECTIONS
 
   .bss :
   {
+    __bss_mulai = .;
+
     *(.bss*)
     *(COMMON)
+    
+    __bss_akhir = .;
   }
 
   /DISCARD/ :
